@@ -1,4 +1,3 @@
-
 #' Transform a Matrix to Be Sparse.
 #'
 #' Concise function to transform dense to sparse matrices of class
@@ -55,9 +54,13 @@ is_square <- function(x) {
 #' @noRd
 is_symmetric <- function(x, tol = 0) {
   is_sparse <- is_sparse(x)
-  if(!is.matrix(x) && !is_sparse) {stop("Please provide a matrix")}
-  if(!is_square(x)) {return(FALSE)}
-  if(is_sparse) {
+  if (!is.matrix(x) && !is_sparse) {
+    stop("Please provide a matrix")
+  }
+  if (!is_square(x)) {
+    return(FALSE)
+  }
+  if (is_sparse) {
     isTRUE(is_symmetric_S(x, tol = tol))
   } else {
     isTRUE(is_symmetric_D(x, tol = tol))
@@ -74,13 +77,30 @@ is_symmetric <- function(x, tol = 0) {
 #' @return Returns a logical scalar possibly indicating symmetry.
 #'
 #' @noRd
-maybe_symmetric <- function(x, tol = .Machine$double.eps, checks = TRUE) {
-  if(isTRUE(checks)) {
-    if(!is_square(x)) {return(FALSE)}
-    if(!is.matrix(x)) {stop("Please provide a matrix")}
+maybe_symmetric <- function(
+  x,
+  tol = .Machine$double.eps,
+  n_compared = 100L,
+  checks = TRUE
+) {
+  if (isTRUE(checks)) {
+    if (!is.matrix(x) && !is_sparse(x)) {
+      stop("Please provide a matrix")
+    }
+    if (!is_square(x)) {
+      return(FALSE)
+    }
   }
-  pos <- c(1, nrow(x))
-  isTRUE(all.equal.numeric(x[pos, ], x[, pos], tolerance = tol))
+  n <- nrow(x)
+  m <- min(n, n_compared)
+
+  # Deterministically spread comparison positions over rows and pair them
+  # with the mirrored cell on the anti-diagonal so that (i, j) vs (j, i)
+  # asymmetries are caught without touching the random number generator.
+  i <- 1L + trunc((seq_len(m) - 1L) * n / m)
+  j <- n + 1L - i
+
+  isTRUE(all.equal.numeric(x[cbind(i, j)], x[cbind(j, i)], tolerance = tol))
 }
 
 
@@ -98,11 +118,15 @@ maybe_symmetric <- function(x, tol = .Machine$double.eps, checks = TRUE) {
 #'
 #' @noRd
 num_check <- function(
-  x, min = 0, max = Inf,
+  x,
+  min = 0,
+  max = Inf,
   msg = "Please check the numeric parameters.",
-  fun = as.numeric) {
-
-  if(!is.numeric(x) || length(x) != 1 || x < min || x > max) {stop(msg)}
+  fun = as.numeric
+) {
+  if (!is.numeric(x) || length(x) != 1 || x < min || x > max) {
+    stop(msg)
+  }
 
   return(fun(x))
 }
@@ -110,8 +134,10 @@ num_check <- function(
 
 #' @noRd
 int_check <- function(
-  x, min = 0L, max = Inf,
-  msg = "Please check the integer parameters.") {
-
+  x,
+  min = 0L,
+  max = Inf,
+  msg = "Please check the integer parameters."
+) {
   num_check(x, min, max, msg, fun = as.integer)
 }

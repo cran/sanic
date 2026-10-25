@@ -33,6 +33,18 @@ solve_SLU <- function(a, b, ordering = 1L) {
     .Call('_sanic_solve_SLU', PACKAGE = 'sanic', a, b, ordering)
 }
 
+factorize_LU <- function(a, pivot) {
+    .Call('_sanic_factorize_LU', PACKAGE = 'sanic', a, pivot)
+}
+
+factorize_SLU <- function(a, ordering) {
+    .Call('_sanic_factorize_SLU', PACKAGE = 'sanic', a, ordering)
+}
+
+solve_LU_factor <- function(factor, b) {
+    .Call('_sanic_solve_LU_factor', PACKAGE = 'sanic', factor, b)
+}
+
 solve_HQR <- function(a, b, pivot = 1L) {
     .Call('_sanic_solve_HQR', PACKAGE = 'sanic', a, b, pivot)
 }
@@ -53,8 +65,8 @@ solve_CG <- function(a, b, x0, tol = 0, iter = 0L, precond = 1L, verbose = FALSE
     .Call('_sanic_solve_CG', PACKAGE = 'sanic', a, b, x0, tol, iter, precond, verbose)
 }
 
-svd_J <- function(a, type = 0L, precond = 0L) {
-    .Call('_sanic_svd_J', PACKAGE = 'sanic', a, type, precond)
+svd_J <- function(a, type = 0L) {
+    .Call('_sanic_svd_J', PACKAGE = 'sanic', a, type)
 }
 
 svd_BDC <- function(a, type = 0L) {

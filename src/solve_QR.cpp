@@ -1,8 +1,17 @@
-
 #include <RcppEigen.h>
 
 // [[Rcpp::depends(RcppEigen)]]
 
+template <typename Solver, typename MatrixA, typename MatrixB>
+Eigen::MatrixXd run_qr(Solver& solver, const MatrixA& a, const MatrixB& b) {
+  solver.compute(a);
+  // Unpivoted schemes return Inf/NaN on rank deficient matrices without info().
+  Eigen::MatrixXd x = solver.solve(b);
+  if(!x.allFinite()) {
+    Rcpp::stop("Solving failed.");
+  }
+  return x;
+}
 
 // [[Rcpp::export]]
 Eigen::MatrixXd solve_HQR(
@@ -10,46 +19,40 @@ Eigen::MatrixXd solve_HQR(
   const Eigen::Map<Eigen::MatrixXd> b,
   unsigned int pivot = 1) {
 
-  Eigen::ColPivHouseholderQR <Eigen::MatrixXd> qr;
   if(pivot == 0) {
-    Eigen::HouseholderQR <Eigen::MatrixXd> qr;
-  } else if(pivot == 2) {
-    Eigen::FullPivHouseholderQR <Eigen::MatrixXd> qr;
-  } else if(pivot > 2) {
+    Eigen::HouseholderQR<Eigen::MatrixXd> solver;
+    return run_qr(solver, a, b);
+  }
+  if(pivot == 2) {
+    Eigen::FullPivHouseholderQR<Eigen::MatrixXd> solver;
+    return run_qr(solver, a, b);
+  }
+  if(pivot > 2) {
     Rcpp::warning("No valid pivoting scheme requested -- using default.");
   }
-
-  qr.compute(a);
-  Eigen::MatrixXd x = qr.solve(b);
-
-  return x;
+  Eigen::ColPivHouseholderQR<Eigen::MatrixXd> solver;
+  return run_qr(solver, a, b);
 }
-
 
 // [[Rcpp::export]]
 Eigen::MatrixXd solve_SQR(
-  const Eigen::MappedSparseMatrix<double> a,
+  const Eigen::Map<Eigen::SparseMatrix<double>> a,
   const Eigen::Map<Eigen::MatrixXd> b,
   unsigned int ordering = 1) {
 
-  Eigen::SparseQR < Eigen::MappedSparseMatrix<double>, Eigen::COLAMDOrdering<int> > solver;
+  if(ordering == 0 && a.rows() == a.cols()) {
+    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::AMDOrdering<int>> solver;
+    return run_qr(solver, a, b);
+  }
+  if(ordering == 2) {
+    Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::NaturalOrdering<int>> solver;
+    return run_qr(solver, a, b);
+  }
   if(ordering == 0) {
-    Eigen::SparseQR < Eigen::MappedSparseMatrix<double>, Eigen::AMDOrdering<int> > solver;
-  } else if(ordering == 2) {
-    Eigen::SparseQR < Eigen::MappedSparseMatrix<double>, Eigen::NaturalOrdering<int> > solver;
+    Rcpp::warning("AMD ordering is not available for rectangular matrices -- using COLAMD.");
   } else if(ordering > 2) {
     Rcpp::warning("No valid ordering requested -- using default.");
   }
-
-  solver.compute(a);
-  if(solver.info() != Eigen::Success) {
-    Rcpp::stop("Decomposition failed.");
-  }
-
-  Eigen::MatrixXd x = solver.solve(b);
-  if(solver.info() != Eigen::Success) {
-    Rcpp::stop("Solving failed.");
-  }
-
-  return x;
+  Eigen::SparseQR<Eigen::SparseMatrix<double>, Eigen::COLAMDOrdering<int>> solver;
+  return run_qr(solver, a, b);
 }
